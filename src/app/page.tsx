@@ -7,6 +7,7 @@ import {
   useCallback,
   useLayoutEffect,
   useMemo,
+  memo,
 } from "react";
 import { createPortal } from "react-dom";
 import {
@@ -49,6 +50,53 @@ function convertSimpleMarkdown(text: string): string {
   result = result.replace(/\*(.+?)\*/g, "<em>$1</em>");
   return result;
 }
+
+const ConversationContent = memo(function ConversationContent({
+  conversation,
+  isThinking,
+}: {
+  conversation: ChatMessage[];
+  isThinking?: boolean;
+}) {
+  return (
+    <>
+      {conversation.map((msg, index) =>
+        msg.role === "user" ? (
+          <div className="mb-2" key={index}>
+            <p className="text-gray-900 font-semibold text-lg">{msg.content}</p>
+          </div>
+        ) : (
+          <div
+            className="text-gray-700 text-base mb-6 leading-relaxed whitespace-pre-wrap"
+            key={index}
+            dangerouslySetInnerHTML={{
+              __html: convertSimpleMarkdown(msg.content),
+            }}
+          />
+        )
+      )}
+
+      {isThinking && (
+        <div className="flex items-center gap-2 text-gray-500 text-sm mb-4">
+          <div className="flex gap-1">
+            <div
+              className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"
+              style={{ animationDelay: "0ms" }}
+            ></div>
+            <div
+              className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"
+              style={{ animationDelay: "150ms" }}
+            ></div>
+            <div
+              className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"
+              style={{ animationDelay: "300ms" }}
+            ></div>
+          </div>
+        </div>
+      )}
+    </>
+  );
+});
 
 function DraggableChat({
   id,
@@ -306,9 +354,6 @@ function DraggableChat({
             </div>
           </div>
 
-          <button className="text-gray-400 hover:text-gray-600 transition-colors cursor-pointer">
-            <XIcon className="w-4 h-4" />
-          </button>
         </div>
 
         {conversation.length === 0 ? (
@@ -322,7 +367,7 @@ function DraggableChat({
                   handleSend();
                 }
               }}
-              placeholder="Enter your query..."
+              placeholder="Ask away..."
               className="w-full px-2 py-1 border-none text-sm text-black rounded-2xl focus:outline-none bg-transparent placeholder:text-gray-400 resize-none overflow-hidden"
               rows={1}
               autoFocus
@@ -336,42 +381,10 @@ function DraggableChat({
         ) : (
           <>
             <div className="p-6">
-              {conversation.map((msg, index) =>
-                msg.role === "user" ? (
-                  <div className="mb-2" key={index}>
-                    <p className="text-gray-900 font-semibold text-lg">
-                      {msg.content}
-                    </p>
-                  </div>
-                ) : (
-                  <div
-                    className="text-gray-700 text-base mb-6 leading-relaxed whitespace-pre-wrap"
-                    key={index}
-                    dangerouslySetInnerHTML={{
-                      __html: convertSimpleMarkdown(msg.content),
-                    }}
-                  />
-                )
-              )}
-
-              {isThinking && (
-                <div className="flex items-center gap-2 text-gray-500 text-sm mb-4">
-                  <div className="flex gap-1">
-                    <div
-                      className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"
-                      style={{ animationDelay: "0ms" }}
-                    ></div>
-                    <div
-                      className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"
-                      style={{ animationDelay: "150ms" }}
-                    ></div>
-                    <div
-                      className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"
-                      style={{ animationDelay: "300ms" }}
-                    ></div>
-                  </div>
-                </div>
-              )}
+              <ConversationContent
+                conversation={conversation}
+                isThinking={isThinking}
+              />
             </div>
 
             <div className="p-4" onMouseDown={(e) => e.stopPropagation()}>
@@ -384,7 +397,7 @@ function DraggableChat({
                     onKeyDown={(e) => {
                       if (e.key === "Enter") handleSend();
                     }}
-                    placeholder="Enter your query..."
+                    placeholder="Ask away..."
                     className="w-full px-4 py-2 pr-12 border border-gray-200 text-sm text-black rounded-2xl focus:outline-none focus:ring-1 focus:ring-black/20 focus:border-transparent"
                   />
                   <button
@@ -464,19 +477,34 @@ export default function Home() {
   ]);
 
   useLayoutEffect(() => {
-    setChatTree((tree) => {
-      if (tree.length > 0) {
-        const newTree = [...tree];
-        newTree[0] = {
-          ...newTree[0],
-          x: window.innerWidth / 2 - CARD_WIDTH / 2,
-          y: 150,
-        };
-        return newTree;
-      }
-      return tree;
-    });
+    if (chatTree.length > 0) {
+      const firstNode = chatTree[0];
+      setPosition({
+        x:
+          window.innerWidth / 2 -
+          (firstNode.x + CARD_WIDTH / 2) * scale,
+        y:
+          window.innerHeight / 2 -
+          (firstNode.y + firstNode.height / 2) * scale,
+      });
+    }
   }, []);
+
+  const handleResetView = useCallback(() => {
+    const newScale = 0.8;
+    setScale(newScale);
+    if (chatTree.length > 0) {
+      const firstNode = chatTree[0];
+      setPosition({
+        x:
+          window.innerWidth / 2 -
+          (firstNode.x + CARD_WIDTH / 2) * newScale,
+        y:
+          window.innerHeight / 2 -
+          (firstNode.y + firstNode.height / 2) * newScale,
+      });
+    }
+  }, [chatTree]);
 
   const flatChats = useMemo(() => {
     function flatten(nodes: ChatNode[]): Omit<ChatNode, "children">[] {
@@ -967,13 +995,13 @@ export default function Home() {
       <div className="fixed z-20 flex gap-2 bottom-0 -left-2  text-zinc-400 px-4 py-2 items-start text-xs">
         <button
           className="hover:text-zinc-600 flex items-center gap-2 py-2 px-2 rounded-lg bg-white border border-zinc-100 hover:bg-zinc-50 hover:border-zinc-300 active:bg-zinc-100 text-zinc-400 cursor-pointer transition-all duration-300 hover:scale-95"
-          onClick={() => setScale(0.8)}
+          onClick={handleResetView}
         >
           <ZoomInIcon className="w-3.5 h-3.5 " /> {(scale * 100).toFixed(0)}%
         </button>
         <button
           className="hover:text-zinc-600 flex items-center gap-2 py-2 px-2 rounded-lg bg-white border border-zinc-100 hover:bg-zinc-50 hover:border-zinc-300 active:bg-zinc-100 text-zinc-400 cursor-pointer transition-all duration-300 hover:scale-95"
-          onClick={() => setPosition({ x: 0, y: 0 })}
+          onClick={handleResetView}
         >
           <LocateFixed className="w-3.5 h-3.5 " /> ({position.x.toFixed(0)},{" "}
           {position.y.toFixed(0)})
