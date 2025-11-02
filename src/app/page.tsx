@@ -16,6 +16,7 @@ import {
   PlusIcon,
   XIcon,
   ZoomInIcon,
+  GitBranch,
 } from "lucide-react";
 
 interface ChatMessage {
@@ -110,6 +111,9 @@ function DraggableChat({
   onNewMessage,
   onCreateFromSelection,
   onPositionChange,
+  onBranch,
+  onDelete,
+  isRoot,
 }: {
   id: number;
   initialX?: number;
@@ -131,6 +135,9 @@ function DraggableChat({
     x: number;
     y: number;
   }) => void;
+  onBranch?: (chatId: number) => void;
+  onDelete?: (chatId: number) => void;
+  isRoot: boolean;
 }) {
   const [boxPosition, setBoxPosition] = useState({ x: initialX, y: initialY });
   const [inputValue, setInputValue] = useState("");
@@ -284,9 +291,18 @@ function DraggableChat({
     >
       <div
         ref={cardRef}
-        className="bg-white rounded-3xl shadow-2xl w-[700px]"
+        className="bg-white rounded-3xl shadow-2xl w-[700px] relative"
         data-stop-pan
       >
+        {!isRoot && onDelete && (
+          <button
+            onClick={() => onDelete(id)}
+            className="absolute top-6 right-6 z-1 cursor-pointer hover:scale-105 transition-all duration-300 text-gray-400 hover:text-gray-700"
+            data-stop-pan
+          >
+            <XIcon className="w-5 h-5" />
+          </button>
+        )}
         {quotedText && (
           <div className="px-4 pt-4 text-xs text-gray-500">
             <div className="border border-gray-200 rounded-xl p-3 bg-gray-50 text-gray-700 whitespace-pre-wrap">
@@ -353,7 +369,6 @@ function DraggableChat({
               </button>
             </div>
           </div>
-
         </div>
 
         {conversation.length === 0 ? (
@@ -388,7 +403,7 @@ function DraggableChat({
             </div>
 
             <div className="p-4" onMouseDown={(e) => e.stopPropagation()}>
-              <div className="flex">
+              <div className="flex items-center gap-2">
                 <div className="relative flex-1">
                   <input
                     type="text"
@@ -402,12 +417,21 @@ function DraggableChat({
                   />
                   <button
                     onClick={handleSend}
-                    className="absolute right-1 top-1/2 -translate-y-1/2 bg-black text-white hover:bg-zinc-900 transition-colors font-medium rounded-full w-8 h-8 flex items-center justify-center"
+                    className="absolute right-1 top-1/2 cursor-pointer hover:scale-105 transition-all duration-300 -translate-y-1/2 bg-black text-white hover:bg-zinc-800  font-medium rounded-full w-8 h-8 flex items-center justify-center"
                     tabIndex={-1}
                   >
                     <ArrowUpIcon className="w-4 h-4" />
                   </button>
                 </div>
+                {onBranch && (
+                  <button
+                    onClick={() => onBranch(id)}
+                    className="flex items-center gap-1 text-sm text-gray-500 cursor-pointer hover:scale-105 transition-all duration-300 hover:text-gray-800 border border-gray-200 rounded-2xl px-4 py-2 "
+                  >
+                    <GitBranch className="w-3.5 h-3.5" />
+                    Branch
+                  </button>
+                )}
               </div>
             </div>
           </>
@@ -459,6 +483,9 @@ export default function Home() {
   const [position, setPosition] = useState({ x: 0, y: 0 });
   const [scale, setScale] = useState(0.8);
   const [startPan, setStartPan] = useState({ x: 0, y: 0 });
+  const [layoutMode, setLayoutMode] = useState<"horizontal" | "vertical">(
+    "horizontal"
+  );
 
   const CARD_WIDTH = 700;
   const HORIZONTAL_SPACING = 100;
@@ -480,12 +507,9 @@ export default function Home() {
     if (chatTree.length > 0) {
       const firstNode = chatTree[0];
       setPosition({
-        x:
-          window.innerWidth / 2 -
-          (firstNode.x + CARD_WIDTH / 2) * scale,
+        x: window.innerWidth / 2 - (firstNode.x + CARD_WIDTH / 2) * scale,
         y:
-          window.innerHeight / 2 -
-          (firstNode.y + firstNode.height / 2) * scale,
+          window.innerHeight / 2 - (firstNode.y + firstNode.height / 2) * scale,
       });
     }
   }, []);
@@ -496,9 +520,7 @@ export default function Home() {
     if (chatTree.length > 0) {
       const firstNode = chatTree[0];
       setPosition({
-        x:
-          window.innerWidth / 2 -
-          (firstNode.x + CARD_WIDTH / 2) * newScale,
+        x: window.innerWidth / 2 - (firstNode.x + CARD_WIDTH / 2) * newScale,
         y:
           window.innerHeight / 2 -
           (firstNode.y + firstNode.height / 2) * newScale,
@@ -578,6 +600,47 @@ export default function Home() {
     },
     []
   );
+
+  const handleBranch = useCallback((sourceChatId: number) => {
+    const newId = Date.now();
+    const newNode: ChatNode = {
+      id: newId,
+      quotedText: undefined,
+      children: [],
+      x: 0,
+      y: 0,
+      height: 150,
+      conversation: [],
+    };
+
+    setChatTree((currentTree) => {
+      function addChild(nodes: ChatNode[]): ChatNode[] {
+        return nodes.map((node) => {
+          if (node.id === sourceChatId) {
+            return { ...node, children: [...node.children, newNode] };
+          }
+          if (node.children.length > 0) {
+            return { ...node, children: addChild(node.children) };
+          }
+          return node;
+        });
+      }
+      return addChild(currentTree);
+    });
+  }, []);
+
+  const handleDelete = useCallback((chatId: number) => {
+    setChatTree((currentTree) => {
+      function removeNode(nodes: ChatNode[]): ChatNode[] {
+        const newNodes = nodes.filter((node) => node.id !== chatId);
+        return newNodes.map((node) => ({
+          ...node,
+          children: removeNode(node.children),
+        }));
+      }
+      return removeNode(currentTree);
+    });
+  }, []);
 
   const handleChatPositionChange = useCallback(
     ({ chatId, x, y }: { chatId: number; x: number; y: number }) => {
@@ -765,7 +828,7 @@ export default function Home() {
     }
     updateHeights(newTree);
 
-    function layout(nodes: ChatNode[]) {
+    function layoutVertical(nodes: ChatNode[]) {
       const getSubtreeWidth = (node: ChatNode): number => {
         if (node.children.length === 0) return CARD_WIDTH;
         return node.children
@@ -804,15 +867,59 @@ export default function Home() {
           xOffset += childWidth + HORIZONTAL_SPACING;
         });
       };
+      nodes.forEach((root) => positionChildren(root));
+    }
+
+    function layoutHorizontal(nodes: ChatNode[]) {
+      const getSubtreeHeight = (node: ChatNode): number => {
+        if (node.children.length === 0) {
+          return node.height;
+        }
+        const childrenHeight = node.children
+          .map(getSubtreeHeight)
+          .reduce((acc, h) => acc + h + VERTICAL_SPACING, -VERTICAL_SPACING);
+        return Math.max(node.height, childrenHeight);
+      };
+
+      const positionChildren = (node: ChatNode) => {
+        const children = node.children || [];
+        if (children.length === 0) return;
+
+        const totalHeight = children
+          .map(getSubtreeHeight)
+          .reduce((acc, h) => acc + h + VERTICAL_SPACING, -VERTICAL_SPACING);
+
+        let yOffset = node.y + node.height / 2 - totalHeight / 2;
+
+        children.forEach((child) => {
+          const childHeight = getSubtreeHeight(child);
+          const newX = node.x + CARD_WIDTH + HORIZONTAL_SPACING;
+          const newY = yOffset + childHeight / 2 - child.height / 2;
+
+          if (!child.manualPosition && (child.x !== newX || child.y !== newY)) {
+            child.x = newX;
+            child.y = newY;
+            hasChanges = true;
+          }
+
+          positionChildren(child);
+          yOffset += childHeight + VERTICAL_SPACING;
+        });
+      };
 
       nodes.forEach((root) => positionChildren(root));
     }
-    layout(newTree);
+
+    if (layoutMode === "horizontal") {
+      layoutHorizontal(newTree);
+    } else {
+      layoutVertical(newTree);
+    }
 
     if (hasChanges) {
       setChatTree(newTree);
     }
-  }, [chatTree]);
+  }, [chatTree, layoutMode]);
 
   const handleMouseDown = (e: React.MouseEvent) => {
     if ((e.target as HTMLElement).closest("[data-stop-pan]")) {
@@ -932,10 +1039,38 @@ export default function Home() {
             style={{ width: 9999, height: 9999 }}
           >
             {links.map(({ parent, child }) => {
-              const x1 = parent.x + CARD_WIDTH / 2;
-              const y1 = parent.y + parent.height;
-              const x2 = child.x + CARD_WIDTH / 2;
-              const y2 = child.y;
+              const { x1, y1, x2, y2, pathD } =
+                layoutMode === "horizontal"
+                  ? {
+                      x1: parent.x + CARD_WIDTH,
+                      y1: parent.y + parent.height / 2,
+                      x2: child.x,
+                      y2: child.y + child.height / 2,
+                      pathD: (
+                        sx1: number,
+                        sy1: number,
+                        sx2: number,
+                        sy2: number
+                      ) =>
+                        `M${sx1},${sy1} C${(sx1 + sx2) / 2},${sy1} ${
+                          (sx1 + sx2) / 2
+                        },${sy2} ${sx2},${sy2}`,
+                    }
+                  : {
+                      x1: parent.x + CARD_WIDTH / 2,
+                      y1: parent.y + parent.height,
+                      x2: child.x + CARD_WIDTH / 2,
+                      y2: child.y,
+                      pathD: (
+                        sx1: number,
+                        sy1: number,
+                        sx2: number,
+                        sy2: number
+                      ) =>
+                        `M${sx1},${sy1} C${sx1},${(sy1 + sy2) / 2} ${sx2},${
+                          (sy1 + sy2) / 2
+                        } ${sx2},${sy2}`,
+                    };
 
               const left = Math.min(x1, x2) - 10;
               const top = Math.min(y1, y2) - 10;
@@ -960,9 +1095,7 @@ export default function Home() {
                   height={height}
                 >
                   <path
-                    d={`M${sx1},${sy1} C${sx1},${(sy1 + sy2) / 2} ${sx2},${
-                      (sy1 + sy2) / 2
-                    } ${sx2},${sy2}`}
+                    d={pathD(sx1, sy1, sx2, sy2)}
                     stroke="#9ca3af"
                     strokeWidth={1.5}
                     fill="none"
@@ -987,6 +1120,9 @@ export default function Home() {
               onNewMessage={handleNewMessage}
               onCreateFromSelection={handleCreateFromSelection}
               onPositionChange={handleChatPositionChange}
+              onBranch={handleBranch}
+              onDelete={handleDelete}
+              isRoot={chat.id === chatTree[0]?.id}
             />
           ))}
         </div>
@@ -1005,6 +1141,17 @@ export default function Home() {
         >
           <LocateFixed className="w-3.5 h-3.5 " /> ({position.x.toFixed(0)},{" "}
           {position.y.toFixed(0)})
+        </button>
+        <button
+          className="hover:text-zinc-600 flex items-center gap-2 py-2 px-2 rounded-lg bg-white border border-zinc-100 hover:bg-zinc-50 hover:border-zinc-300 active:bg-zinc-100 text-zinc-400 cursor-pointer transition-all duration-300 hover:scale-95"
+          onClick={() =>
+            setLayoutMode((prev) =>
+              prev === "horizontal" ? "vertical" : "horizontal"
+            )
+          }
+        >
+          <GitBranch className="w-3.5 h-3.5 " />
+          {layoutMode === "horizontal" ? "Horizontal" : "Vertical"}
         </button>
       </div>
     </div>
