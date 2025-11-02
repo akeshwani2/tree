@@ -121,11 +121,9 @@ export async function POST(req: NextRequest) {
       async start(controller) {
         try {
           for await (const part of result.fullStream) {
-            // stream only text deltas and tool results to the frontend
             if (part.type === "text-delta") {
               controller.enqueue(encoder.encode(part.text));
             } else if (part.type === "tool-result") {
-              // stream the tool result answer if it exists
               const toolResult = (part as any).output;
               if (toolResult?.answer) {
                 controller.enqueue(encoder.encode(toolResult.answer));
