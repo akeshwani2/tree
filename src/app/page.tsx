@@ -18,7 +18,7 @@ import {
   ZoomInIcon,
   GitBranch,
 } from "lucide-react";
-
+import Image from "next/image";
 interface ChatMessage {
   role: "user" | "assistant";
   content: string;
@@ -68,7 +68,7 @@ const ConversationContent = memo(function ConversationContent({
           </div>
         ) : (
           <div
-            className="text-gray-700 text-base mb-6 leading-relaxed whitespace-pre-wrap"
+            className="text-gray-700 text-base mb-6 leading-relaxed whitespace-pre-wrap wrap-break-word"
             key={index}
             dangerouslySetInnerHTML={{
               __html: convertSimpleMarkdown(msg.content),
@@ -322,29 +322,16 @@ function DraggableChat({
             <div>
               <button className="flex items-center gap-2 border border-zinc-200 rounded-md px-2 py-1 cursor-pointer">
                 <div className="text-black hover:text-zinc-900 transition-all duration-300">
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    width="18"
-                    height="18"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="1.5"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    className="icon icon-tabler icons-tabler-outline icon-tabler-brand-openai  "
-                  >
-                    <path stroke="none" d="M0 0h24v24H0z" fill="none" />
-                    <path d="M11.217 19.384a3.501 3.501 0 0 0 6.783 -1.217v-5.167l-6 -3.35" />
-                    <path d="M5.214 15.014a3.501 3.501 0 0 0 4.446 5.266l4.34 -2.534v-6.946" />
-                    <path d="M6 7.63c-1.391 -.236 -2.787 .395 -3.534 1.689a3.474 3.474 0 0 0 1.271 4.745l4.263 2.514l6 -3.348" />
-                    <path d="M12.783 4.616a3.501 3.501 0 0 0 -6.783 1.217v5.067l6 3.45" />
-                    <path d="M18.786 8.986a3.501 3.501 0 0 0 -4.446 -5.266l-4.34 2.534v6.946" />
-                    <path d="M18 16.302c1.391 .236 2.787 -.395 3.534 -1.689a3.474 3.474 0 0 0 -1.271 -4.745l-4.308 -2.514l-5.955 3.42" />
-                  </svg>
+                  <Image
+                    src="/image.png"
+                    alt="Parallel"
+                    width={18}
+                    height={18}
+                    className="w-[16px] h-[16px]"
+                  />
                 </div>
                 <div className=" text-[12px] text-black select-text">
-                  GPT 4.1 Nano
+                  Parallel
                 </div>
               </button>
             </div>
