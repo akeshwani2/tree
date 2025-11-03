@@ -10,6 +10,7 @@ import {
   memo,
 } from "react";
 import { createPortal } from "react-dom";
+import { marked } from "marked";
 import {
   ArrowUpIcon,
   LocateFixed,
@@ -46,10 +47,7 @@ function truncateSelection(text: string): string {
 }
 
 function convertSimpleMarkdown(text: string): string {
-  let result = text;
-  result = result.replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>");
-  result = result.replace(/\*(.+?)\*/g, "<em>$1</em>");
-  return result;
+  return marked(text) as string;
 }
 
 const ConversationContent = memo(function ConversationContent({
@@ -68,7 +66,7 @@ const ConversationContent = memo(function ConversationContent({
           </div>
         ) : (
           <div
-            className="text-gray-700 text-base mb-6 leading-relaxed whitespace-pre-wrap wrap-break-word"
+            className="text-gray-700 text-base mb-6 leading-relaxed whitespace-pre-wrap wrap-break-word prose"
             key={index}
             dangerouslySetInnerHTML={{
               __html: convertSimpleMarkdown(msg.content),
