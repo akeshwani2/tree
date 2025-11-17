@@ -24,3 +24,58 @@ body {
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
 }
+
+/* compact spacing for prose content */
+.prose-compact p {
+  margin-top: 0.25em;
+  margin-bottom: 0.25em;
+  line-height: 1.5;
+}
+
+.prose-compact h1,
+.prose-compact h2,
+.prose-compact h3,
+.prose-compact h4,
+.prose-compact h5,
+.prose-compact h6 {
+  margin-top: 0.5em;
+  margin-bottom: 0.25em;
+  line-height: 1.3;
+}
+
+.prose-compact ul,
+.prose-compact ol {
+  margin-top: 0.25em;
+  margin-bottom: 0.25em;
+  padding-left: 1.5em;
+}
+
+.prose-compact li {
+  margin-top: 0.1em;
+  margin-bottom: 0.1em;
+  line-height: 1.5;
+}
+
+.prose-compact blockquote {
+  margin-top: 0.25em;
+  margin-bottom: 0.25em;
+}
+
+.prose-compact pre {
+  margin-top: 0.25em;
+  margin-bottom: 0.25em;
+}
+
+.prose-compact code {
+  margin-top: 0;
+  margin-bottom: 0;
+}
+
+.prose-compact strong,
+.prose-compact b {
+  font-weight: 600;
+}
+
+.prose-compact a {
+  text-decoration: none;
+}
